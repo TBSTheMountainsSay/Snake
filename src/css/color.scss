@@ -1,0 +1,17 @@
+$palette: (
+  white: #fff,
+  black: #000,
+  brown: #b96300,
+  brown-light: #602200,
+    blue:#4848e8,
+    yellow: #fbff03
+);
+
+$light-theme: (
+  def: map-get($palette, white),
+  def-black: map-get($palette, black),
+  square: map-get($palette, brown),
+  square-border: map-get($palette, brown-light),
+    player: map-get($palette, blue),
+    food: map-get($palette, yellow),
+);
