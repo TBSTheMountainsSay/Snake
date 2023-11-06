@@ -1,4 +1,7 @@
 .App {
+  display: flex;
+  text-align: center;
+  justify-content: center;
 }
 
 @media (prefers-reduced-motion: no-preference) {

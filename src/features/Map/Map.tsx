@@ -31,9 +31,9 @@ const isPointIncluded = (point: TPoint, pointsArray: TPoint[]): boolean =>
 const Map: React.FC<TMapProps> = ({ width, height }) => {
   const [player, setPlayer] = useState<TPlayer>({
     coords: [
-      [15, 8],
-      [16, 8],
-      [17, 8],
+      [5, 2],
+      [6, 2],
+      [7, 2],
     ],
   });
   const [food, setFood] = useState<TPoint>([
@@ -42,81 +42,99 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
   ]);
 
   const [score, setScore] = useState<number>(0);
+  const [direction, setDirection] = useState<string>('KeyA');
+  const [isDefeated, setIsDefeated] = useState<boolean>(false);
+
+  const foodCoords = Array.from({ length: MAP_WIDTH * MAP_HEIGHT }, (_, i) => [
+    (i % MAP_WIDTH) + 1,
+    Math.floor(i / MAP_WIDTH) + 1,
+  ]).filter((coord) => !isPointIncluded([coord[0], coord[1]], player.coords));
+
+  const randomIndex = getRandom(0, foodCoords.length - 1);
+  const [foodX, foodY] = foodCoords[randomIndex];
+
+  const handlePressButton = (event: KeyboardEvent) => {
+    switch (event.code) {
+      case 'KeyW':
+        setDirection('KeyW');
+        player.coords[0][1] <= 1
+          ? setPlayer({
+              coords: [
+                [player.coords[0][0], MAP_HEIGHT],
+                ...player.coords.slice(0, -1),
+              ],
+            })
+          : setPlayer({
+              coords: [
+                [player.coords[0][0], player.coords[0][1] - 1],
+                ...player.coords.slice(0, -1),
+              ],
+            });
+        break;
+      case 'KeyS':
+        setDirection('KeyS');
+        player.coords[0][1] >= MAP_HEIGHT
+          ? setPlayer({
+              coords: [[player.coords[0][0], 1], ...player.coords.slice(0, -1)],
+            })
+          : setPlayer({
+              coords: [
+                [player.coords[0][0], player.coords[0][1] + 1],
+                ...player.coords.slice(0, -1),
+              ],
+            });
+        break;
+      case 'KeyA':
+        setDirection('KeyA');
+        player.coords[0][0] <= 1
+          ? setPlayer({
+              coords: [
+                [MAP_WIDTH, player.coords[0][1]],
+                ...player.coords.slice(0, -1),
+              ],
+            })
+          : setPlayer({
+              coords: [
+                [player.coords[0][0] - 1, player.coords[0][1]],
+                ...player.coords.slice(0, -1),
+              ],
+            });
+        break;
+      case 'KeyD':
+        setDirection('KeyD');
+        player.coords[0][0] >= MAP_WIDTH
+          ? setPlayer({
+              coords: [[1, player.coords[0][1]], ...player.coords.slice(0, -1)],
+            })
+          : setPlayer({
+              coords: [
+                [player.coords[0][0] + 1, player.coords[0][1]],
+                ...player.coords.slice(0, -1),
+              ],
+            });
+        break;
+    }
+  };
 
   useEffect(() => {
-    const handlePressButton = (event: KeyboardEvent) => {
-      switch (event.code) {
-        case 'KeyW':
-          player.coords[0][1] <= 1
-            ? setPlayer({
-                coords: [
-                  [player.coords[0][0], MAP_HEIGHT],
-                  ...player.coords.slice(0, -1),
-                ],
-              })
-            : setPlayer({
-                coords: [
-                  [player.coords[0][0], player.coords[0][1] - 1],
-                  ...player.coords.slice(0, -1),
-                ],
-              });
-          break;
-        case 'KeyS':
-          player.coords[0][1] >= MAP_HEIGHT
-            ? setPlayer({
-                coords: [
-                  [player.coords[0][0], 1],
-                  ...player.coords.slice(0, -1),
-                ],
-              })
-            : setPlayer({
-                coords: [
-                  [player.coords[0][0], player.coords[0][1] + 1],
-                  ...player.coords.slice(0, -1),
-                ],
-              });
-          break;
-        case 'KeyA':
-          player.coords[0][0] <= 1
-            ? setPlayer({
-                coords: [
-                  [MAP_WIDTH, player.coords[0][1]],
-                  ...player.coords.slice(0, -1),
-                ],
-              })
-            : setPlayer({
-                coords: [
-                  [player.coords[0][0] - 1, player.coords[0][1]],
-                  ...player.coords.slice(0, -1),
-                ],
-              });
-          break;
-        case 'KeyD':
-          player.coords[0][0] >= MAP_WIDTH
-            ? setPlayer({
-                coords: [
-                  [1, player.coords[0][1]],
-                  ...player.coords.slice(0, -1),
-                ],
-              })
-            : setPlayer({
-                coords: [
-                  [player.coords[0][0] + 1, player.coords[0][1]],
-                  ...player.coords.slice(0, -1),
-                ],
-              });
-          break;
-      }
-    };
     document.addEventListener('keydown', handlePressButton);
-    return () => document.removeEventListener('keydown', handlePressButton);
-  }, [player]);
+
+    const timeoutId = setTimeout(() => {
+      handlePressButton({ code: direction } as KeyboardEvent);
+    }, 250);
+
+    return () => {
+      document.removeEventListener('keydown', handlePressButton);
+      clearTimeout(timeoutId);
+    };
+  }, [player, direction]);
 
   useEffect(() => {
     const handleEat = (player: TPlayer, food: TPoint) => {
       if (isPointIncluded(food, player.coords)) {
-        setFood([getRandom(1, MAP_WIDTH), getRandom(1, MAP_HEIGHT)]);
+        setFood([foodX, foodY]);
         setScore(score + 1);
+        setPlayer({ coords: [...player.coords, food] });
       }
     };
     handleEat(player, food);
@@ -124,11 +142,16 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
 
   return (
     <div className={styles.map}>
+      <div className={styles.score}>YOUR SCORE: {score}</div>
       {generateMap(width, height).map((array) => (
         <div>
           {array.map((item) => (
             <div
               className={clsx(styles.square, {
+                [styles.head]: isSamePoints(
+                  [item[1], item[0]],
+                  player.coords[0]
+                ),
                 [styles.player]: isPointIncluded(
                   [item[1], item[0]],
                   player.coords
@@ -139,7 +162,6 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
           ))}
         </div>
       ))}
-      <div className={styles.score}>YOUR SCORE: {score}</div>
     </div>
   );
 };
