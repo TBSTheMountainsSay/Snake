@@ -44,6 +44,7 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
   const [score, setScore] = useState<number>(0);
   const [direction, setDirection] = useState<string>('KeyA');
   const [isDefeated, setIsDefeated] = useState<boolean>(false);
+  const [isWinning, setIsWinning] = useState<boolean>(false);
 
   const foodCoords = Array.from({ length: MAP_WIDTH * MAP_HEIGHT }, (_, i) => [
     (i % MAP_WIDTH) + 1,
@@ -54,74 +55,86 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
   const [foodX, foodY] = foodCoords[randomIndex];
 
   const handlePressButton = (event: KeyboardEvent) => {
-    switch (event.code) {
-      case 'KeyW':
-        setDirection('KeyW');
-        player.coords[0][1] <= 1
-          ? setPlayer({
-              coords: [
-                [player.coords[0][0], MAP_HEIGHT],
-                ...player.coords.slice(0, -1),
-              ],
-            })
-          : setPlayer({
-              coords: [
-                [player.coords[0][0], player.coords[0][1] - 1],
-                ...player.coords.slice(0, -1),
-              ],
-            });
-        break;
-      case 'KeyS':
-        setDirection('KeyS');
-        player.coords[0][1] >= MAP_HEIGHT
-          ? setPlayer({
-              coords: [[player.coords[0][0], 1], ...player.coords.slice(0, -1)],
-            })
-          : setPlayer({
-              coords: [
-                [player.coords[0][0], player.coords[0][1] + 1],
-                ...player.coords.slice(0, -1),
-              ],
-            });
-        break;
-      case 'KeyA':
-        setDirection('KeyA');
-        player.coords[0][0] <= 1
-          ? setPlayer({
-              coords: [
-                [MAP_WIDTH, player.coords[0][1]],
-                ...player.coords.slice(0, -1),
-              ],
-            })
-          : setPlayer({
-              coords: [
-                [player.coords[0][0] - 1, player.coords[0][1]],
-                ...player.coords.slice(0, -1),
-              ],
-            });
-        break;
-      case 'KeyD':
-        setDirection('KeyD');
-        player.coords[0][0] >= MAP_WIDTH
-          ? setPlayer({
-              coords: [[1, player.coords[0][1]], ...player.coords.slice(0, -1)],
-            })
-          : setPlayer({
-              coords: [
-                [player.coords[0][0] + 1, player.coords[0][1]],
-                ...player.coords.slice(0, -1),
-              ],
-            });
-        break;
+    if (player.coords.length <= MAP_WIDTH * MAP_HEIGHT - 1) {
+      switch (event.code) {
+        case 'KeyW':
+          setDirection('KeyW');
+          player.coords[0][1] <= 1
+            ? setPlayer({
+                coords: [
+                  [player.coords[0][0], MAP_HEIGHT],
+                  ...player.coords.slice(0, -1),
+                ],
+              })
+            : setPlayer({
+                coords: [
+                  [player.coords[0][0], player.coords[0][1] - 1],
+                  ...player.coords.slice(0, -1),
+                ],
+              });
+          break;
+        case 'KeyS':
+          setDirection('KeyS');
+          player.coords[0][1] >= MAP_HEIGHT
+            ? setPlayer({
+                coords: [
+                  [player.coords[0][0], 1],
+                  ...player.coords.slice(0, -1),
+                ],
+              })
+            : setPlayer({
+                coords: [
+                  [player.coords[0][0], player.coords[0][1] + 1],
+                  ...player.coords.slice(0, -1),
+                ],
+              });
+          break;
+        case 'KeyA':
+          setDirection('KeyA');
+          player.coords[0][0] <= 1
+            ? setPlayer({
+                coords: [
+                  [MAP_WIDTH, player.coords[0][1]],
+                  ...player.coords.slice(0, -1),
+                ],
+              })
+            : setPlayer({
+                coords: [
+                  [player.coords[0][0] - 1, player.coords[0][1]],
+                  ...player.coords.slice(0, -1),
+                ],
+              });
+          break;
+        case 'KeyD':
+          setDirection('KeyD');
+          player.coords[0][0] >= MAP_WIDTH
+            ? setPlayer({
+                coords: [
+                  [1, player.coords[0][1]],
+                  ...player.coords.slice(0, -1),
+                ],
+              })
+            : setPlayer({
+                coords: [
+                  [player.coords[0][0] + 1, player.coords[0][1]],
+                  ...player.coords.slice(0, -1),
+                ],
+              });
+          break;
+      }
     }
   };
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     document.addEventListener('keydown', handlePressButton);
 
-    const timeoutId = setTimeout(() => {
-      handlePressButton({ code: direction } as KeyboardEvent);
-    }, 250);
+    if (player.coords.length <= MAP_WIDTH * MAP_HEIGHT - 1) {
+      timeoutId = setTimeout(() => {
+        handlePressButton({ code: direction } as KeyboardEvent);
+      }, 300);
+    }
 
     return () => {
       document.removeEventListener('keydown', handlePressButton);
@@ -140,28 +153,72 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
     handleEat(player, food);
   }, [player, food]);
 
+  useEffect(() => {
+    if (player.coords.length === MAP_WIDTH * MAP_HEIGHT) setIsWinning(true);
+  }, [player]);
+
+  const handleRestart = () => {
+    setScore(0);
+    setDirection('KeyA');
+    setIsWinning(false);
+    setIsDefeated(false);
+    setPlayer({
+      coords: [
+        [5, 2],
+        [6, 2],
+        [7, 2],
+      ],
+    });
+  };
+
   return (
-    <div className={styles.map}>
-      <div className={styles.score}>YOUR SCORE: {score}</div>
-      {generateMap(width, height).map((array) => (
-        <div>
-          {array.map((item) => (
-            <div
-              className={clsx(styles.square, {
-                [styles.head]: isSamePoints(
-                  [item[1], item[0]],
-                  player.coords[0]
-                ),
-                [styles.player]: isPointIncluded(
-                  [item[1], item[0]],
-                  player.coords
-                ),
-                [styles.food]: isSamePoints([item[1], item[0]], food),
-              })}
-            />
-          ))}
-        </div>
-      ))}
+    <div className={styles.wrapper}>
+      <div
+        className={clsx(styles.finalBoard, {
+          [styles.hidden]: !isWinning,
+          [styles.open]: isWinning,
+        })}
+      >
+        <div className={styles.title}>CONGRATULATIONS! YOU WIN!</div>
+        <div className={styles.subtitle}>YOUR SCORE: {score} </div>
+        <button className={styles.restart} onClick={handleRestart}>
+          restart
+        </button>
+      </div>
+      <div
+        className={clsx(styles.finalBoard, {
+          [styles.hidden]: !isDefeated,
+          [styles.open]: isDefeated,
+        })}
+      >
+        <div className={styles.title}>YOU LOSE! </div>
+        <div className={styles.subtitle}>YOUR SCORE: {score} </div>
+        <button className={styles.restart} onClick={handleRestart}>
+          restart
+        </button>
+      </div>
+      <div className={styles.map}>
+        <div className={styles.score}>YOUR SCORE: {score}</div>
+        {generateMap(width, height).map((array) => (
+          <div>
+            {array.map((item) => (
+              <div
+                className={clsx(styles.square, {
+                  [styles.head]: isSamePoints(
+                    [item[1], item[0]],
+                    player.coords[0]
+                  ),
+                  [styles.player]: isPointIncluded(
+                    [item[1], item[0]],
+                    player.coords
+                  ),
+                  [styles.food]: isSamePoints([item[1], item[0]], food),
+                })}
+              />
+            ))}
+          </div>
+        ))}
+      </div>{' '}
     </div>
   );
 };

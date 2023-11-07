@@ -1,27 +1,81 @@
-.map {
-  margin-top: 10rem;
-  .square {
-    display: inline-block;
-    width: 4rem;
-    height: 4rem;
-    background-color: var(--square);
-    border: 5px solid var(--square-border);
-    margin: -2px ;
+.wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+
+
+  .finalBoard {
+    position: absolute;
+    background-color: var(--def);
+    width: 80rem;
+    height: 60rem;
+    justify-content: center;
+    align-items: center;
+    transition: 0.5s;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    border-radius: 2rem;
+    .title{
+      font-size: 8rem;
+    }
+    .subtitle{
+      font-size: 8rem;
+    }
+    .restart{
+      font-size: 8rem;
+      background-color: var(--def-black);
+      color: var(--def);
+      padding: 1rem 3rem;
+      border: 4px solid var(--def-black);
+      transition: 0.3s;
+      border-radius: 2rem;
+    }
+    .restart:hover{
+      background-color: var(--def);
+      color: var(--def-black);
+    }
   }
-  .player{
-    background-color: var(--player);
+
+  .hidden{
+    top: -70rem;
   }
-  .head{
-    background-color: var(--head);
+
+  .open{
+    top: 15rem;
   }
-  .food{
-    background-color: var(--food);
-  }
-  .score{
-    margin-bottom: 1rem ;
-    font-size: 5rem;
-    font-family: "Pixelify Sans";
-    font-weight: 600;
-    color: var(--def);
+
+
+
+  .map {
+    margin-top: 15rem;
+
+    .square {
+      display: inline-block;
+      width: 4rem;
+      height: 4rem;
+      background-color: var(--square);
+      border: 5px solid var(--square-border);
+      margin: -2px;
+    }
+
+    .player {
+      background-color: var(--player);
+    }
+
+    .head {
+      background-color: var(--head);
+    }
+
+    .food {
+      background-color: var(--food);
+    }
+
+    .score {
+      margin-bottom: 1rem;
+      font-size: 5rem;
+      font-weight: 600;
+      color: var(--def);
+    }
   }
 }
