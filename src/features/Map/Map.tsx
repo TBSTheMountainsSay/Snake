@@ -2,9 +2,68 @@ import React, { useEffect, useState } from 'react';
 import styles from './Map.module.scss';
 import { TMap, TPlayer, TPoint } from './Map.type';
 import clsx from 'clsx';
-import { MAP_HEIGHT, MAP_WIDTH } from '../../consts/consts';
+import {
+  MAP_HEIGHT,
+  MAP_WIDTH,
+  MAX_SCORE_INTERVAL,
+  MAX_TIME_INTERVAL,
+  MIN_TIME_INTERVAL,
+} from '../../consts/consts';
 
 type TMapProps = TMap;
+
+const getEnlargedSnake = (direction: string, player: TPlayer) => {
+  let newPlayer = { ...player };
+  let newHead: TPoint = [...newPlayer.coords[0]];
+
+  switch (direction) {
+    case 'KeyW':
+      newHead[1] -= 1;
+      break;
+
+    case 'KeyS':
+      newHead[1] += 1;
+      break;
+
+    case 'KeyA':
+      newHead[0] -= 1;
+      break;
+
+    case 'KeyD':
+      newHead[0] += 1;
+      break;
+  }
+
+  newPlayer.coords.unshift(newHead);
+
+  if (newPlayer.coords[0][0] > MAP_WIDTH) {
+    newPlayer.coords[0][0] = 1;
+  }
+  if (newPlayer.coords[0][0] < 1) {
+    newPlayer.coords[0][0] = MAP_WIDTH;
+  }
+  if (newPlayer.coords[0][1] > MAP_HEIGHT) {
+    newPlayer.coords[0][1] = 1;
+  }
+  if (newPlayer.coords[0][1] < 1) {
+    newPlayer.coords[0][1] = MAP_HEIGHT;
+  }
+  return newPlayer;
+};
+
+const getDirection = (direction: string, code: string) => {
+  let newDirection = code;
+
+  if (
+    (direction === 'KeyA' && newDirection === 'KeyD') ||
+    (direction === 'KeyD' && newDirection === 'KeyA') ||
+    (direction === 'KeyW' && newDirection === 'KeyS') ||
+    (direction === 'KeyS' && newDirection === 'KeyW')
+  ) {
+    return direction;
+  }
+  return newDirection;
+};
 
 const getRandom = (min: number, max: number) => {
   return Math.round(Math.random() * (max - min) + min);
@@ -20,6 +79,18 @@ const generateMap = (width: number, height: number): [number, number][][] => {
     map.push(row);
   }
   return map;
+};
+
+const getEmptyCoords = (player: TPlayer) => {
+  const superEmptyCoords = [];
+  for (let i = 1; i <= MAP_HEIGHT; i++) {
+    for (let j = 1; j <= MAP_WIDTH; j++) {
+      if (!isPointIncluded([j, i], player.coords)) {
+        superEmptyCoords.push([j, i]);
+      }
+    }
+  }
+  return superEmptyCoords;
 };
 
 const isSamePoints = (firstPoint: TPoint, secondPoint: TPoint): boolean =>
@@ -43,143 +114,73 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
 
   const [score, setScore] = useState<number>(0);
   const [direction, setDirection] = useState<string>('KeyD');
-  const [isDefeated, setIsDefeated] = useState<boolean>(false);
-  const [isWinning, setIsWinning] = useState<boolean>(false);
+  const [gameStatus, setGameStatus] = useState<'play' | 'win' | 'defeat'>(
+    'play'
+  );
 
-  const emptyCoords = Array.from({ length: MAP_WIDTH * MAP_HEIGHT }, (_, i) => [
-    (i % MAP_WIDTH) + 1,
-    Math.floor(i / MAP_WIDTH) + 1,
-  ]).filter((coord) => !isPointIncluded([coord[0], coord[1]], player.coords));
-
-  const randomIndex = getRandom(0, emptyCoords.length - 1);
-  const [foodX, foodY] = emptyCoords[randomIndex];
+  const emptyCoords = getEmptyCoords(player);
+  const timeInterval = Math.max(
+    -(MIN_TIME_INTERVAL / MAX_SCORE_INTERVAL) * score + MAX_TIME_INTERVAL,
+    MIN_TIME_INTERVAL
+  );
 
   const handlePressButton = (event: KeyboardEvent) => {
-    if (player.coords.length <= MAP_WIDTH * MAP_HEIGHT - 1) {
-      switch (event.code) {
-        case 'KeyW':
-          if (direction !== 'KeyS') {
-            setDirection('KeyW');
-            player.coords[0][1] <= 1
-              ? setPlayer({
-                  coords: [
-                    [player.coords[0][0], MAP_HEIGHT],
-                    ...player.coords.slice(0, -1),
-                  ],
-                })
-              : setPlayer({
-                  coords: [
-                    [player.coords[0][0], player.coords[0][1] - 1],
-                    ...player.coords.slice(0, -1),
-                  ],
-                });
-          }
-          break;
-        case 'KeyS':
-          if (direction !== 'KeyW') {
-            setDirection('KeyS');
-            player.coords[0][1] >= MAP_HEIGHT
-              ? setPlayer({
-                  coords: [
-                    [player.coords[0][0], 1],
-                    ...player.coords.slice(0, -1),
-                  ],
-                })
-              : setPlayer({
-                  coords: [
-                    [player.coords[0][0], player.coords[0][1] + 1],
-                    ...player.coords.slice(0, -1),
-                  ],
-                });
-          }
-          break;
-        case 'KeyA':
-          if (direction !== 'KeyD') {
-            setDirection('KeyA');
-            player.coords[0][0] <= 1
-              ? setPlayer({
-                  coords: [
-                    [MAP_WIDTH, player.coords[0][1]],
-                    ...player.coords.slice(0, -1),
-                  ],
-                })
-              : setPlayer({
-                  coords: [
-                    [player.coords[0][0] - 1, player.coords[0][1]],
-                    ...player.coords.slice(0, -1),
-                  ],
-                });
-          }
-          break;
-        case 'KeyD':
-          if (direction !== 'KeyA') {
-            setDirection('KeyD');
-            player.coords[0][0] >= MAP_WIDTH
-              ? setPlayer({
-                  coords: [
-                    [1, player.coords[0][1]],
-                    ...player.coords.slice(0, -1),
-                  ],
-                })
-              : setPlayer({
-                  coords: [
-                    [player.coords[0][0] + 1, player.coords[0][1]],
-                    ...player.coords.slice(0, -1),
-                  ],
-                });
-          }
-          break;
-      }
+    let newPlayer: TPlayer;
+    let newDirection = getDirection(direction, event.code);
+    newPlayer = getEnlargedSnake(newDirection, player);
+
+    if (isPointIncluded(food, newPlayer.coords)) {
+      const randomIndex = getRandom(0, emptyCoords.length - 1);
+      console.log(emptyCoords);
+      const [foodX, foodY] = emptyCoords[randomIndex];
+      setFood([foodX, foodY]);
+      setScore(score + 1);
+    } else {
+      newPlayer.coords.pop();
     }
+    let head = player.coords[0];
+    if (isPointIncluded(head, newPlayer.coords.slice(1))) {
+      setGameStatus('defeat');
+      return;
+    }
+    if (emptyCoords.length === 0) {
+      setGameStatus('win');
+      return;
+    }
+    setPlayer(newPlayer);
+    setDirection(newDirection);
   };
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
+    if (gameStatus !== 'play') return;
     document.addEventListener('keydown', handlePressButton);
 
-    if (player.coords.length <= MAP_WIDTH * MAP_HEIGHT - 1) {
+    if (emptyCoords.length > 0 && gameStatus === 'play') {
       timeoutId = setTimeout(() => {
         handlePressButton({ code: direction } as KeyboardEvent);
-      }, 300);
+      }, timeInterval);
     }
 
     return () => {
       document.removeEventListener('keydown', handlePressButton);
       clearTimeout(timeoutId);
     };
-  }, [player, direction]);
+  }, [player, direction, emptyCoords, gameStatus]);
 
   useEffect(() => {
-    let head = player.coords[0];
-    let newPlayer = { ...player };
-    const CheckCell = (head: TPoint, food: TPoint) => {
-      if (isPointIncluded(food, player.coords)) {
-        newPlayer = { ...newPlayer, coords: [food, ...player.coords] };
-        setFood([foodX, foodY]);
-        setScore(score + 1);
-        setPlayer(newPlayer);
-      }
-      if (isPointIncluded(head, newPlayer.coords.slice(2))) {
-        setIsDefeated(true);
-      }
-    };
-    CheckCell(head, food);
-  }, [player, food]);
-
-  useEffect(() => {
-    if (emptyCoords.length === 0) setIsWinning(true);
+    if (emptyCoords.length === 0) setGameStatus('win');
   }, [emptyCoords]);
 
   const handleRestart = () => {
     setScore(0);
-    setDirection('KeyA');
-    setIsWinning(false);
-    setIsDefeated(false);
+    setDirection('KeyD');
+    setGameStatus('play');
     setPlayer({
       coords: [
-        [5, 2],
-        [6, 2],
-        [7, 2],
+        [3, 1],
+        [2, 1],
+        [1, 1],
       ],
     });
   };
@@ -188,8 +189,8 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
     <div className={styles.wrapper}>
       <div
         className={clsx(styles.finalBoard, {
-          [styles.hidden]: !isWinning,
-          [styles.open]: isWinning,
+          [styles.hidden]: gameStatus !== 'win',
+          [styles.open]: gameStatus === 'win',
         })}
       >
         <div className={styles.title}>CONGRATULATIONS! YOU WIN!</div>
@@ -200,8 +201,8 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
       </div>
       <div
         className={clsx(styles.finalBoard, {
-          [styles.hidden]: !isDefeated,
-          [styles.open]: isDefeated,
+          [styles.hidden]: gameStatus !== 'defeat',
+          [styles.open]: gameStatus === 'defeat',
         })}
       >
         <div className={styles.title}>YOU LOSE! </div>
@@ -231,7 +232,7 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
             ))}
           </div>
         ))}
-      </div>{' '}
+      </div>
     </div>
   );
 };
