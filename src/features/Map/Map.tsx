@@ -31,9 +31,9 @@ const isPointIncluded = (point: TPoint, pointsArray: TPoint[]): boolean =>
 const Map: React.FC<TMapProps> = ({ width, height }) => {
   const [player, setPlayer] = useState<TPlayer>({
     coords: [
-      [5, 2],
-      [6, 2],
-      [7, 2],
+      [3, 1],
+      [2, 1],
+      [1, 1],
     ],
   });
   const [food, setFood] = useState<TPoint>([
@@ -42,7 +42,7 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
   ]);
 
   const [score, setScore] = useState<number>(0);
-  const [direction, setDirection] = useState<string>('KeyA');
+  const [direction, setDirection] = useState<string>('KeyD');
   const [isDefeated, setIsDefeated] = useState<boolean>(false);
   const [isWinning, setIsWinning] = useState<boolean>(false);
 
@@ -135,7 +135,6 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-
     document.addEventListener('keydown', handlePressButton);
 
     if (player.coords.length <= MAP_WIDTH * MAP_HEIGHT - 1) {
@@ -151,29 +150,25 @@ const Map: React.FC<TMapProps> = ({ width, height }) => {
   }, [player, direction]);
 
   useEffect(() => {
-    const handleEatFood = (food: TPoint) => {
+    let head = player.coords[0];
+    let newPlayer = { ...player };
+    const CheckCell = (head: TPoint, food: TPoint) => {
       if (isPointIncluded(food, player.coords)) {
+        newPlayer = { ...newPlayer, coords: [food, ...player.coords] };
         setFood([foodX, foodY]);
         setScore(score + 1);
-        setPlayer({ coords: [...player.coords, food] });
+        setPlayer(newPlayer);
       }
-    };
-    handleEatFood(food);
-  }, [player, food]);
-
-  useEffect(() => {
-    if (player.coords.length === MAP_WIDTH * MAP_HEIGHT) setIsWinning(true);
-  }, [player]);
-
-  useEffect(() => {
-    const handleMove = (cell: TPoint) => {
-      if (isPointIncluded(cell, player.coords)) {
+      if (isPointIncluded(head, newPlayer.coords.slice(2))) {
         setIsDefeated(true);
       }
     };
+    CheckCell(head, food);
+  }, [player, food]);
 
-    emptyCoords.forEach((coord) => handleMove([coord[0], coord[1]]));
-  }, [player, emptyCoords]);
+  useEffect(() => {
+    if (emptyCoords.length === 0) setIsWinning(true);
+  }, [emptyCoords]);
 
   const handleRestart = () => {
     setScore(0);
